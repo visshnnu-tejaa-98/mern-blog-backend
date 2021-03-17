@@ -5,7 +5,9 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 const mongoClient = mongodb.MongoClient;
-const DB_URL = 'mongodb://127.0.0.1:27017';
+// const DB_URL = 'mongodb://127.0.0.1:27017';
+const DB_URL =
+	'mongodb+srv://admin-vishnu:vishnu123@vishnu.1nuon.mongodb.net/myFirstDatabase?retryWrites=true&w=majority';
 const DATA_BASE = 'TechBlogs';
 const USERS_COLLECTION = 'users';
 const BLOGS_COLLECTION = 'blogs';
@@ -15,8 +17,6 @@ const PORT = process.env.PORT || 3000;
 dotenv.config();
 
 app.use(express.json());
-
-console.log(process.env.EMAIL, process.env.PASSWORD, process.env.URL);
 
 // nodemailer configuration
 const transporter = nodemailer.createTransport({
@@ -56,6 +56,7 @@ app.get('/', (req, res) => {
 
 app.post('/register', async (req, res) => {
 	try {
+		console.log(req.body);
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		let user = await db.collection(USERS_COLLECTION).findOne({ email: req.body.email });
@@ -86,7 +87,7 @@ app.post('/register', async (req, res) => {
 					console.log('Email Sent');
 				}
 			});
-			res.status(200).json({ message: 'User Added!' });
+			res.redirect('http://localhost:3001/login');
 		}
 		client.close();
 	} catch (error) {
@@ -97,6 +98,7 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
 	try {
+		console.log(req.body);
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		let user = await db.collection(USERS_COLLECTION).findOne({ email: req.body.email });
