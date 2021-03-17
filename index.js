@@ -2,6 +2,8 @@ const express = require('express');
 const mongodb = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
 const mongoClient = mongodb.MongoClient;
 const DB_URL = 'mongodb://127.0.0.1:27017';
 const DATA_BASE = 'TechBlogs';
@@ -10,7 +12,20 @@ const BLOGS_COLLECTION = 'blogs';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+dotenv.config();
+
 app.use(express.json());
+
+console.log(process.env.EMAIL, process.env.PASSWORD, process.env.URL);
+
+// nodemailer configuration
+const transporter = nodemailer.createTransport({
+	service: 'gmail',
+	auth: {
+		user: process.env.EMAIL,
+		pass: process.env.PASSWORD,
+	},
+});
 
 // authenticate
 const Authenticate = async (req, res, next) => {
@@ -51,6 +66,26 @@ app.post('/register', async (req, res) => {
 			const hash = await bcrypt.hash(req.body.password, salt);
 			req.body.password = hash;
 			await db.collection(USERS_COLLECTION).insertOne(req.body);
+			let mailOptione = {
+				from: process.env.EMAIL,
+				to: req.body.email,
+				subject: 'Registration Successful!!!',
+				html: `<div>
+						<p>Hi ${req.body.name},</p>
+						<p>
+							Thank you for Registering our <strong>Tech Blogs</strong>
+						</p>
+						<p>Login Here to explore more</p>
+						<p>${process.env.FRONTEND_URL}/login</p>
+					</div>`,
+			};
+			transporter.sendMail(mailOptione, (err, data) => {
+				if (err) {
+					console.log(err);
+				} else {
+					console.log('Email Sent');
+				}
+			});
 			res.status(200).json({ message: 'User Added!' });
 		}
 		client.close();
@@ -77,6 +112,63 @@ app.post('/login', async (req, res) => {
 			res.send({ message: 'Not Allow' });
 		}
 		client.close();
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ message: 'something went wrong' });
+	}
+});
+
+app.post('/forgot', async (req, res) => {
+	try {
+		const client = await mongoClient.connect(DB_URL);
+		const db = client.db(DATA_BASE);
+		let user = await db.collection(USERS_COLLECTION).findOne({ email: req.body.email });
+		if (user) {
+			let mailOptione = {
+				from: process.env.EMAIL,
+				to: req.body.email,
+				subject: 'Registration Successful!!!',
+				html: `<div>
+						<p>Hi ${req.body.name},</p>
+						<p>
+							Here is your link to reset your password!!
+						</p>
+						<p>${process.env.FRONTEND_URL}/reset</p>
+					</div>`,
+			};
+			transporter.sendMail(mailOptione, (err, data) => {
+				if (err) {
+					console.log(err);
+				} else {
+					console.log('Email Sent');
+				}
+			});
+			res.status(200).json({ message: 'Mail sent to reset Password' });
+		} else {
+			res.json({ message: "User doesn't exist" });
+		}
+		client.close();
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ message: 'something went wrong' });
+	}
+});
+
+app.post('/reset', async (req, res) => {
+	try {
+		const client = await mongoClient.connect(DB_URL);
+		const db = client.db(DATA_BASE);
+		let user = await db.collection(USERS_COLLECTION).findOne({ email: req.body.email });
+		if (user) {
+			const salt = await bcrypt.genSalt(10);
+			const hash = await bcrypt.hash(req.body.password, salt);
+			req.body.password = hash;
+			await db
+				.collection(USERS_COLLECTION)
+				.updateOne({ email: req.body.email }, { $set: { password: req.body.password } });
+		}
+		client.close();
+		res.status(200).json({ message: 'Password updated Successfully' });
 	} catch (error) {
 		console.log(error);
 		res.status(500).json({ message: 'something went wrong' });
