@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
+const cors = require('cors');
 const mongoClient = mongodb.MongoClient;
 // const DB_URL = 'mongodb://127.0.0.1:27017';
 const DB_URL =
@@ -17,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 dotenv.config();
 
 app.use(express.json());
+app.use(cors());
 
 // nodemailer configuration
 const transporter = nodemailer.createTransport({
@@ -183,10 +185,11 @@ app.post('/postblog', [Authenticate], async (req, res) => {
 		const db = client.db(DATA_BASE);
 		await db.collection(BLOGS_COLLECTION).insertOne({
 			heading: req.body.heading,
-			subHeading: req.body.subheading,
-			imgUrl: req.body.url,
-			message: req.body.postdiscription,
+			subHeading: req.body.subHeading,
+			url: req.body.url,
+			body: req.body.body,
 			email: req.body.auth.email,
+			date: new Date(),
 		});
 		res.status(200).json({ message: 'Post Added to your profile' });
 		client.close();
@@ -201,7 +204,7 @@ app.get('/blogs', [Authenticate], async (req, res) => {
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		let blogs = await db.collection(BLOGS_COLLECTION).find().toArray();
-		console.log(posts);
+		console.log(blogs);
 		client.close();
 		res.status(200).json(blogs);
 	} catch (error) {
