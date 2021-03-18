@@ -38,7 +38,6 @@ const Authenticate = async (req, res, next) => {
 		} else {
 			jwt.verify(bearer, 'secret', (err, decode) => {
 				if (decode) {
-					console.log(decode);
 					req.body.auth = decode;
 					next();
 				} else {
@@ -100,7 +99,6 @@ app.post('/register', async (req, res) => {
 
 app.post('/login', async (req, res) => {
 	try {
-		console.log(req.body);
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		let user = await db.collection(USERS_COLLECTION).findOne({ email: req.body.email });
@@ -204,7 +202,6 @@ app.get('/blogs', [Authenticate], async (req, res) => {
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		let blogs = await db.collection(BLOGS_COLLECTION).find().toArray();
-		console.log(blogs);
 		client.close();
 		res.status(200).json(blogs);
 	} catch (error) {
@@ -247,6 +244,7 @@ app.delete('/blogs/:id', [Authenticate], async (req, res) => {
 
 app.put('/blogs/:id', [Authenticate], async (req, res) => {
 	try {
+		console.log(req.body);
 		const client = await mongoClient.connect(DB_URL);
 		const db = client.db(DATA_BASE);
 		await db.collection(BLOGS_COLLECTION).updateOne(
@@ -254,15 +252,32 @@ app.put('/blogs/:id', [Authenticate], async (req, res) => {
 			{
 				$set: {
 					heading: req.body.heading,
-					subHeading: req.body.subheading,
-					imgUrl: req.body.url,
-					message: req.body.postdiscription,
+					subHeading: req.body.subHeading,
+					url: req.body.url,
+					body: req.body.body,
+					date: new Date(),
 				},
 			}
 		);
 		// console.log(posts);
 		client.close();
 		res.status(200).json({ message: 'Blog Updated' });
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ message: 'Something went wrong' });
+	}
+});
+
+app.get('/myblogs', [Authenticate], async (req, res) => {
+	try {
+		const client = await mongoClient.connect(DB_URL);
+		const db = client.db(DATA_BASE);
+		let blogs = await db
+			.collection(BLOGS_COLLECTION)
+			.find({ email: req.body.auth.email })
+			.toArray();
+		client.close();
+		res.status(200).json(blogs);
 	} catch (error) {
 		console.log(error);
 		res.status(500).json({ message: 'Something went wrong' });
